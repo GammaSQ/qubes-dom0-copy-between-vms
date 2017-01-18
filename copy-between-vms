@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e -o pipefail
+
+if [ $# -lt 3 ] ; then
+    echo usage: $0 'source_vmname dest_vmname file [file]+'
+    exit 1
+fi
+
+SOURCE="$1"
+shift
+
+VM="$1"
+shift
+
+TMPDIR=`mktemp -d`
+trap 'rm -rf -- "$TMPDIR"' EXIT
+RESPONSE=$TMPDIR/response
+mkfifo -- "$RESPONSE"
+
+qvm-run --pass-io "$SOURCE" "/usr/lib/qubes/qfile-agent $@" <"$RESPONSE" | qvm-run --pass-io $VM "QUBESRPC qubes.Filecopy $SOURCE" | ./eat_pipe.py "$RESPONSE"
